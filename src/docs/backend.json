@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the TeamUp application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The user's email address."
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "description": "The user's preferred language, stored to persist language selection."
+        }
+      },
+      "required": ["id", "email"]
+    },
+    "Config": {
+        "title": "Config",
+        "type": "object",
+        "description": "Represents a saved team generation configuration.",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Unique identifier for the config."
+            },
+            "name": {
+                "type": "string",
+                "description": "The user-provided name for the configuration."
+            },
+            "userId": {
+                "type": "string",
+                "description": "The ID of the user who owns this configuration."
+            },
+            "configData": {
+                "type": "string",
+                "description": "A JSON string representing the application state to be saved."
+            }
+        },
+        "required": ["name", "userId", "configData"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "anonymous",
+      "email-password"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles, including preferred language."
+        }
+      },
+      {
+        "path": "/users/{userId}/configs/{configId}",
+        "definition": {
+            "entityName": "Config",
+            "schema": {
+                "$ref": "#/backend/entities/Config"
+            },
+            "description": "Stores multiple saved configurations for a specific user."
+        }
+      }
+    ]
+  }
+}
