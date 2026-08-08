@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import SkillsPanel from './SkillsPanel';
 
 
 interface SettingsPanelProps {
@@ -310,6 +311,8 @@ export default function SettingsPanel({ state, updateState }: SettingsPanelProps
                 }}
             />
         </div>
+
+        <SkillsPanel state={state} updateState={updateState} />
 
         {state.enableRoles && state.showRolesInputs && (
           <div className="space-y-4 pt-4 border-t">
