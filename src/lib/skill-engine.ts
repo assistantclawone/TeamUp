@@ -11,26 +11,38 @@ function round2(value: number): number {
 }
 
 /**
+ * Normalizes a skill value to a [0, 1] range where 1 is "best".
+ */
+export function normalizeSkillValue(
+  value: number | null | undefined,
+  min: number | null | undefined,
+  max: number | null | undefined,
+  smallerIsBetter: boolean
+): number | null {
+  if (value === null || value === undefined || min === null || min === undefined || max === null || max === undefined) {
+    return value ?? null;
+  }
+  
+  const range = max - min;
+  if (range === 0) return 0.5; // Avoid division by zero
+
+  let relativ = (value - min) / range;
+  relativ = Math.max(0, Math.min(1, relativ));
+
+  return smallerIsBetter ? 1 - relativ : relativ;
+}
+
+/**
  * Computes the skill value for a single person from a single MatchResult.
- *
- * Renato's volleyball logic:
- * - diff = maxFinalScore - startScore. If diff <= 0 the result is invalid (no one could win).
- * - relativ = (personScore - startScore) / diff, clamped to [0,1]. Winner -> 1, loser(s) lower.
- * - Direction:
- *   - smallerIsBetter=false (bigger scale value is better, e.g. DE 6=best): skill = commonMin + relativ * (commonMax - commonMin)
- *   - smallerIsBetter=true  (smaller scale value is better, e.g. DE school grade 1=best): skill = commonMin + (1 - relativ) * (commonMax - commonMin)
- *   Winner therefore always gets the BEST value on the chosen scale.
- *
- * @returns rounded skill value, or null if the person does not participate or the match is invalid.
+ * Renato's Option A: normalization uses the actual max score of the match.
  */
 export function computeSkillForResult(
   result: MatchResult,
   personId: string,
-  scaling: SkillScaling
+  scaling: SkillScaling // used for the target output scale
 ): number | null {
   const entry = result.entries.find((e) => e.personId === personId);
   if (!entry) return null;
-
   if (result.entries.length === 0) return null;
 
   const maxScore = Math.max(...result.entries.map((e) => e.score));
@@ -38,8 +50,7 @@ export function computeSkillForResult(
   if (diff <= 0) return null;
 
   let relativ = (entry.score - result.startScore) / diff;
-  // Clamp winner to exactly 1 even when a score overshoots maxScore tie handling.
-  relativ = clamp(relativ, 0, 1);
+  relativ = Math.max(0, Math.min(1, relativ));
 
   const range = scaling.commonMax - scaling.commonMin;
   let value: number;
@@ -49,7 +60,7 @@ export function computeSkillForResult(
     value = scaling.commonMin + relativ * range;
   }
 
-  return round2(clamp(value, Math.min(scaling.commonMin, scaling.commonMax), Math.max(scaling.commonMin, scaling.commonMax)));
+  return round2(value);
 }
 
 /**

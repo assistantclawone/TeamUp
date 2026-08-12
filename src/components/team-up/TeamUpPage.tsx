@@ -51,7 +51,12 @@ const getInitialState = (): AppState => ({
     quotaExceeded: true,
     unassigned: true,
   },
-  language: 'en'
+  language: 'en',
+  skillScaling: { mode: 'common', commonMin: 1, commonMax: 6, smallerIsBetter: false },
+  skillMode: 'manual',
+  showSkillScales: false,
+  skillDistribution: 'off',
+  results: [],
 });
 
 const flagKeys: (keyof AppState)[] = [
@@ -62,6 +67,7 @@ const flagKeys: (keyof AppState)[] = [
   'showResultNumbers',
   'showResultRoles',
   'showRoleQuotaStatus',
+  'showSkillScales',
 ];
 
 export default function TeamUpPage() {
@@ -571,8 +577,10 @@ export default function TeamUpPage() {
             {state.people.map((person, index) => (
               <NameInputRow
                 key={person.id}
-                ref={el => nameInputRefs.current[index] = el}
                 person={person}
+                ref={(el) => {
+                  nameInputRefs.current[index] = el;
+                }}
                 index={index}
                 allPeople={state.people}
                 allRoles={allRoles}

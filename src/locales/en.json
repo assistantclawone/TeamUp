@@ -143,5 +143,16 @@
   "skill_display": "Skill",
   "team_avg_skill": "Team Ø",
   "no_skill_scale": "Please provide a valid scale (Min < Max).",
-  "skill_distribution_explanation": "Choose how skills control team assignment."
+  "skill_distribution_explanation": "Choose how skills control team assignment.",
+  "skill_scales_on": "Enable scales (min/max per person)",
+  "skill_direction": "Direction",
+  "skill_min_short": "Min",
+  "skill_max_short": "Max",
+  "skill_larger_is_better_short": "Larger = better",
+  "skill_smaller_is_better_short": "Smaller = better",
+  "apply_to_team": "Apply to team",
+  "apply_to_all": "Apply to all",
+  "apply_min_to_all": "Apply min to all",
+  "apply_max_to_all": "Apply max to all",
+  "apply_dir_to_all": "Apply direction to all"
 }

@@ -241,12 +241,12 @@ export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allR
   }
 
   const handleSpontaneousRoleDelete = (roleToDelete: string) => {
-    setSpontaneousRoles(prev => prev.filter(r => r !== roleToDelete));
+    setSpontaneousRoles(prev => prev.filter((r: string) => r !== roleToDelete));
     const newTeams = JSON.parse(JSON.stringify(teams));
     for (const team of newTeams) {
         for (const person of team) {
             if (Array.isArray(person.role) ? person.role.includes(roleToDelete) : person.role === roleToDelete) {
-                person.role = Array.isArray(person.role) ? person.role.filter(r => r !== roleToDelete) : '';
+                person.role = Array.isArray(person.role) ? person.role.filter((r: string) => r !== roleToDelete) : '';
             }
         }
     }

@@ -10,6 +10,7 @@ const flagKeys: (keyof AppState)[] = [
   'showResultNumbers',
   'showResultRoles',
   'showRoleQuotaStatus',
+  'showSkillScales',
 ];
 
 const encodeFlags = (state: Partial<AppState>): string => {
@@ -23,7 +24,7 @@ const decodeFlags = (flagStr: string): Partial<AppState> => {
   flagStr.split('').forEach((char, index) => {
     const key = flagKeys[index];
     if (key) {
-      state[key] = char === '1';
+      (state as Record<string, boolean>)[key] = char === '1';
     }
   });
   return state;
@@ -95,7 +96,11 @@ export function stateToUrlParams(state: Partial<AppState>): URLSearchParams {
             roleStr,
             p.mustBeWith.join(A_DELIM),
             p.cannotBeWith.join(A_DELIM),
-          ].map(s => encodeURIComponent(s)).join(F_DELIM)
+            p.skill ?? '',
+            p.skillMin ?? '',
+            p.skillMax ?? '',
+            p.skillSmallerIsBetter === true ? '1' : (p.skillSmallerIsBetter === false ? '0' : ''),
+          ].map(s => encodeURIComponent(String(s))).join(F_DELIM)
       })
       .join(P_DELIM);
     params.set('p', peopleStr);
@@ -130,6 +135,21 @@ export function stateToUrlParams(state: Partial<AppState>): URLSearchParams {
    }
 
 
+  if (state.skillMode) params.set('sm', state.skillMode);
+  if (state.skillDistribution) params.set('sd', state.skillDistribution);
+  if (state.skillScaling) {
+    const { commonMin, commonMax, smallerIsBetter } = state.skillScaling;
+    params.set('ss', `${commonMin},${commonMax},${smallerIsBetter ? '1' : '0'}`);
+  }
+
+  if (state.results && state.results.length > 0) {
+    const resultsStr = state.results.map(r => {
+      const entriesStr = r.entries.map(e => `${e.personId}:${e.score}`).join(A_DELIM);
+      return [r.id, encodeURIComponent(r.label || ''), r.startScore, entriesStr].join(F_DELIM);
+    }).join(P_DELIM);
+    params.set('res', resultsStr);
+  }
+
   return params;
 }
 
@@ -162,7 +182,8 @@ export function urlParamsToState(params: ReadonlyURLSearchParams): Partial<AppSt
   const peopleMap = new Map<string, Person>();
   if (params.has('p')) {
     state.people = params.get('p')!.split(P_DELIM).map(pStr => {
-      const [id, name, roleStr, mustBeWith, cannotBeWith] = pStr.split(F_DELIM).map(s => decodeURIComponent(s));
+      const parts = pStr.split(F_DELIM).map(s => decodeURIComponent(s));
+      const [id, name, roleStr, mustBeWith, cannotBeWith, skill, skillMin, skillMax, smaller] = parts;
       const role = roleStr?.includes(R_DELIM) ? roleStr.split(R_DELIM).filter(Boolean) : (roleStr ? [roleStr] : []);
       const person: Person = {
         id,
@@ -170,6 +191,10 @@ export function urlParamsToState(params: ReadonlyURLSearchParams): Partial<AppSt
         role: role,
         mustBeWith: mustBeWith ? mustBeWith.split(A_DELIM).filter(Boolean) : [],
         cannotBeWith: cannotBeWith ? cannotBeWith.split(A_DELIM).filter(Boolean) : [],
+        skill: skill === '' ? null : Number(skill),
+        skillMin: skillMin === '' ? null : Number(skillMin),
+        skillMax: skillMax === '' ? null : Number(skillMax),
+        skillSmallerIsBetter: smaller === '1' ? true : (smaller === '0' ? false : null),
       };
       peopleMap.set(id, person);
       return person;
@@ -212,6 +237,33 @@ export function urlParamsToState(params: ReadonlyURLSearchParams): Partial<AppSt
       state.historyIndex = Number(params.get('hIdx'));
   }
 
+
+  if (params.has('sm')) state.skillMode = params.get('sm') as any;
+  if (params.has('sd')) state.skillDistribution = params.get('sd') as any;
+  if (params.has('ss')) {
+    const [min, max, smaller] = params.get('ss')!.split(',');
+    state.skillScaling = {
+      mode: 'common',
+      commonMin: Number(min),
+      commonMax: Number(max),
+      smallerIsBetter: smaller === '1',
+    };
+  }
+
+  if (params.has('res')) {
+    state.results = params.get('res')!.split(P_DELIM).map(rStr => {
+      const [id, label, start, entriesStr] = rStr.split(F_DELIM);
+      return {
+        id,
+        label: decodeURIComponent(label),
+        startScore: Number(start),
+        entries: (entriesStr ? entriesStr.split(A_DELIM) : []).map(eStr => {
+          const [pId, score] = eStr.split(':');
+          return { personId: pId, score: Number(score) };
+        }),
+      };
+    });
+  }
 
   return state;
 }
