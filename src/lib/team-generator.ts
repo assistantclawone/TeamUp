@@ -1,3 +1,4 @@
+import { normalizeSkillValue } from './skill-engine';
 import type { Person, AppState } from './types';
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -38,16 +39,19 @@ function isTeamFull(team: Person[], teamIndex: number, state: AppState): boolean
 }
 
 /**
- * Returns the effective skill value for a person.
- * In 'common' scale we use person.skill directly (already normalized).
- * Falls back to a mid-scale value when unset, or null when no scaling exists.
+ * Returns the effective skill value for a person normalized to [0, 1].
+ * Fallback to 0.5 when no skill is set.
  */
-function getPersonSkill(person: Person, state: AppState): number | null {
+function getPersonSkillNormalized(person: Person, state: AppState): number | null {
   const s = person.skill;
   if (s === null || s === undefined || Number.isNaN(s)) return null;
-  const min = state.skillScaling?.commonMin ?? 1;
-  const max = state.skillScaling?.commonMax ?? 6;
-  return Math.min(Math.max(s, Math.min(min, max)), Math.max(min, max));
+
+  // Use person-specific scaling if available, else common scaling
+  const min = person.skillMin ?? state.skillScaling.commonMin;
+  const max = person.skillMax ?? state.skillScaling.commonMax;
+  const smallerIsBetter = person.skillSmallerIsBetter ?? state.skillScaling.smallerIsBetter;
+
+  return normalizeSkillValue(s, min, max, smallerIsBetter);
 }
 
 /**
@@ -55,7 +59,7 @@ function getPersonSkill(person: Person, state: AppState): number | null {
  * or null if none of the members have a skill.
  */
 function getGroupSkill(members: Person[], state: AppState): number | null {
-  const values = members.map((m) => getPersonSkill(m, state)).filter((v): v is number => v !== null);
+  const values = members.map((m) => getPersonSkillNormalized(m, state)).filter((v): v is number => v !== null);
   if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
@@ -124,7 +128,7 @@ export function generateTeams(
             skillCliques.sort((a, b) => {
                 const sa = getGroupSkill(a, state) ?? Number.POSITIVE_INFINITY;
                 const sb = getGroupSkill(b, state) ?? Number.POSITIVE_INFINITY;
-                return sa - sb; // weakest first so they land in later (weaker) teams
+                return sa - sb; // weakest first
             });
         }
 
@@ -216,7 +220,7 @@ export function generateTeams(
                         let best = availablePeopleIndices[0];
                         let bestScore = Number.POSITIVE_INFINITY;
                         for (const idx of availablePeopleIndices) {
-                            const skill = getPersonSkill(unassignedPeople[idx], state);
+                            const skill = getPersonSkillNormalized(unassignedPeople[idx], state);
                             const score = scoreBalancesTeam(teamAvg, skill);
                             if (score < bestScore) { bestScore = score; best = idx; }
                         }
@@ -226,7 +230,7 @@ export function generateTeams(
                         let best = availablePeopleIndices[0];
                         let bestDiff = Number.POSITIVE_INFINITY;
                         for (const idx of availablePeopleIndices) {
-                            const skill = getPersonSkill(unassignedPeople[idx], state);
+                            const skill = getPersonSkillNormalized(unassignedPeople[idx], state);
                             const diff = teamAvg === null ? 0 : Math.abs((skill ?? teamAvg) - teamAvg);
                             if (diff < bestDiff) { bestDiff = diff; best = idx; }
                         }
@@ -254,7 +258,7 @@ export function generateTeams(
         // teams end up with similar average skill. Persons without a skill are
         // treated as neutral and assigned to the smallest team.
         const ranking = unassignedPeople
-            .map((p, i) => ({ p, i, skill: getPersonSkill(p, state) }))
+            .map((p, i) => ({ p, i, skill: getPersonSkillNormalized(p, state) }))
             .sort((a, b) => (b.skill ?? 0) - (a.skill ?? 0));
 
         for (const { p: person } of ranking) {
@@ -266,7 +270,7 @@ export function generateTeams(
                 if (isTeamFull(team, teamIndex, state)) continue;
                 if (isConflict(person, team, state.enableRules)) continue;
 
-                const skill = getPersonSkill(person, state);
+                const skill = getPersonSkillNormalized(person, state);
                 const avg = teamAverageNonNull(team, state);
                 const score = scoreBalancesTeam(avg, skill, team.length);
                 if (score < bestScore) {
@@ -292,7 +296,7 @@ export function generateTeams(
         // we just order by band (top band placed first) and fill teams round-robin
         // in band order so that equal-strength people end up together.
         const ranking = unassignedPeople
-            .map((p) => ({ p, skill: getPersonSkill(p, state) }))
+            .map((p) => ({ p, skill: getPersonSkillNormalized(p, state) }))
             .sort((a, b) => {
                 const sa = a.skill ?? Number.NEGATIVE_INFINITY;
                 const sb = b.skill ?? Number.NEGATIVE_INFINITY;
@@ -387,9 +391,9 @@ export function generateTeams(
   return teams.map(team => shuffleArray(team));
 }
 
-/** Average skill of a team, ignoring members without a skill. Null when empty/none. */
+/** Average skill of a team (normalized 0-1). Null when empty/none. */
 function teamAverageNonNull(team: Person[], state: AppState): number | null {
-  const values = team.map((p) => getPersonSkill(p, state)).filter((v): v is number => v !== null);
+  const values = team.map((p) => getPersonSkillNormalized(p, state)).filter((v): v is number => v !== null);
   if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }

@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, PlusCircle, Trash2, HelpCircle } from 'lucide-react';
+import { Trophy, PlusCircle, Trash2, HelpCircle, Copy, Users, ClipboardList } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { AppState, MatchResult } from '@/lib/types';
+import type { AppState, MatchResult, Person } from '@/lib/types';
 import { useTranslation } from '@/hooks/use-translation';
 
 interface SkillsPanelProps {
@@ -24,13 +24,56 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
     updateState(prev => ({ ...prev, skillScaling: { ...prev.skillScaling, ...patch } }));
   };
 
-  const setSkillValue = (personId: string, value: string) => {
+  // Update one person's skill-relevant field.
+  const setPersonSkillField = (personId: string, field: keyof Pick<Person, 'skill' | 'skillMin' | 'skillMax'>, value: string) => {
     const num = value === '' ? null : Number(value);
+    const parsed = Number.isNaN(num as number) ? null : num;
     updateState(prev => ({
       ...prev,
-      people: prev.people.map(p => (p.id === personId ? { ...p, skill: Number.isNaN(num as number) ? null : (num as number) } : p)),
+      people: prev.people.map(p => (p.id === personId ? { ...p, [field]: parsed } : p)),
     }));
   };
+
+  const setPersonDirection = (personId: string, value: boolean) => {
+    updateState(prev => ({
+      ...prev,
+      people: prev.people.map(p => (p.id === personId ? { ...p, skillSmallerIsBetter: value } : p)),
+    }));
+  };
+
+  /**
+   * Apply a skill field value to a group of people.
+   * scope: 'team' will be resolved by the caller into an explicit id list.
+   */
+  const applyToPeople = (
+    ids: string[],
+    field: keyof Pick<Person, 'skill' | 'skillMin' | 'skillMax' | 'skillSmallerIsBetter'>,
+    value: string | boolean | number | null
+  ) => {
+    const idSet = new Set(ids);
+    updateState(prev => ({
+      ...prev,
+      people: prev.people.map(p => {
+        if (!idSet.has(p.id)) return p;
+        if (field === 'skill' || field === 'skillMin' || field === 'skillMax') {
+          const val = typeof value === 'string' ? (value === '' ? null : Number(value)) : value;
+          return { ...p, [field]: Number.isNaN(val as number) ? null : (val as number | null) };
+        }
+        return { ...p, [field]: !!value };
+      }),
+    }));
+  };
+
+  const activePeople = state.people.filter(p => p.name.trim() !== '');
+  // For "apply to team" we apply to the people who are in the same team as the
+  // person being edited. Since teams are generated, we apply to all active people
+  // that share the same team label in the last generated result.
+  const teamOfPerson = (personId: string): string[] => {
+    const team = state.generatedTeams.find(team => team.some(m => m.id === personId));
+    if (team) return team.map(m => m.id);
+    return [personId];
+  };
+  const allActiveIds = activePeople.map(p => p.id);
 
   const addMatch = () => {
     updateState(prev => ({
@@ -73,10 +116,33 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
     }));
   };
 
-  const activePeople = state.people.filter(p => p.name.trim() !== '');
+  // Small copy button: apply current value of a field to team or all.
+  const ApplyButton = ({ ids, field, value, kind }: {
+    ids: string[]; field: keyof Pick<Person, 'skill' | 'skillMin' | 'skillMax' | 'skillSmallerIsBetter'>;
+    value: string | boolean | number | null; kind: 'team' | 'all';
+  }) => (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground"
+            onClick={() => applyToPeople(ids, field, value)}
+          >
+            {kind === 'team' ? <Users className="h-3.5 w-3.5" /> : <ClipboardList className="h-3.5 w-3.5" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{kind === 'team' ? t('apply_to_team') : t('apply_to_all')}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 
   return (
-    <div className="space-y-4 pt-4 border-t">
+    <div className="space-y-6 pt-4 border-t">
       <div className="flex items-center gap-2">
         <Trophy className="text-primary" />
         <h3 className="font-semibold text-lg">{t('skills_section')}</h3>
@@ -90,17 +156,9 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
         </TooltipProvider>
       </div>
 
-      {/* Verteilungsmodus */}
+      {/* ============ Verteilungsmodus ============ */}
       <div className="space-y-2">
         <Label className="text-base">{t('skill_distribution')}</Label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className="focus:outline-none ml-1"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></button>
-            </TooltipTrigger>
-            <TooltipContent><p>{t('skill_distribution_explanation')}</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
         <RadioGroup
           value={state.skillDistribution}
           onValueChange={(v: 'off' | 'balanced' | 'levels') => updateState(prev => ({ ...prev, skillDistribution: v }))}
@@ -112,45 +170,7 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
         </RadioGroup>
       </div>
 
-      {/* Skala */}
-      <div className="space-y-2">
-        <Label className="text-base">{t('skill_scale')}</Label>
-        <RadioGroup
-          value={state.skillScaling.mode}
-          onValueChange={(v: 'common' | 'individual') => setScaling({ mode: v })}
-          className="grid grid-cols-1 gap-2"
-        >
-          <div className="flex items-center space-x-2"><RadioGroupItem value="common" id="sc-common" /><Label htmlFor="sc-common">{t('skill_scale_common')}</Label></div>
-          <div className="flex items-center space-x-2"><RadioGroupItem value="individual" id="sc-individual" /><Label htmlFor="sc-individual">{t('skill_scale_individual')}</Label></div>
-        </RadioGroup>
-
-        {state.skillScaling.mode === 'common' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="skill-min" className="text-sm whitespace-nowrap">{t('skill_min')}</Label>
-              <Input id="skill-min" type="number" value={state.skillScaling.commonMin}
-                onChange={(e) => setScaling({ commonMin: Number(e.target.value) })} className="w-24" />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="skill-max" className="text-sm whitespace-nowrap">{t('skill_max')}</Label>
-              <Input id="skill-max" type="number" value={state.skillScaling.commonMax}
-                onChange={(e) => setScaling({ commonMax: Number(e.target.value) })} className="w-24" />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Select value={state.skillScaling.smallerIsBetter ? 'smaller' : 'larger'}
-                onValueChange={(v) => setScaling({ smallerIsBetter: v === 'smaller' })}>
-                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="smaller">{t('skill_smaller_is_better')}</SelectItem>
-                  <SelectItem value="larger">{t('skill_larger_is_better')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Eingabemodus */}
+      {/* ============ Eingabemodus ============ */}
       <div className="space-y-2">
         <Label className="text-base">{t('skill_entry_mode')}</Label>
         <RadioGroup
@@ -163,32 +183,148 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
         </RadioGroup>
       </div>
 
-      {/* Manuelle Eingabe */}
+      {/* ============ Skalen aktivieren (nur manuell) ============ */}
       {state.skillMode === 'manual' && (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">{t('skill_manual_hint')}</p>
-          {activePeople.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('add_participants')}</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {activePeople.map(p => (
-                <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                  <span className="flex-grow truncate text-sm">{p.name}</span>
-                  <Input
-                    type="number"
-                    placeholder={t('skill_manual_placeholder')}
-                    value={p.skill ?? ''}
-                    onChange={(e) => setSkillValue(p.id, e.target.value)}
-                    className="w-20 h-8"
-                  />
-                </div>
-              ))}
+          <div className="flex items-center gap-3">
+            <Label className="text-base">{t('skill_scale')}</Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="show-scales"
+                type="checkbox"
+                checked={state.showSkillScales}
+                onChange={e => updateState(prev => ({ ...prev, showSkillScales: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="show-scales" className="text-sm font-normal">{t('skill_scales_on')}</Label>
+            </div>
+          </div>
+          {state.showSkillScales && (
+            <div className="flex items-end gap-3 flex-wrap">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t('skill_min')}</Label>
+                <Input
+                  id="common-min"
+                  type="number"
+                  value={state.skillScaling.commonMin}
+                  onChange={e => setScaling({ commonMin: Number(e.target.value) })}
+                  className="w-24"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t('skill_max')}</Label>
+                <Input
+                  id="common-max"
+                  type="number"
+                  value={state.skillScaling.commonMax}
+                  onChange={e => setScaling({ commonMax: Number(e.target.value) })}
+                  className="w-24"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t('skill_direction')}</Label>
+                <Select
+                  value={state.skillScaling.smallerIsBetter ? 'smaller' : 'larger'}
+                  onValueChange={v => setScaling({ smallerIsBetter: v === 'smaller' })}
+                >
+                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="larger">{t('skill_larger_is_better')}</SelectItem>
+                    <SelectItem value="smaller">{t('skill_smaller_is_better')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-1 pb-1">
+                <Button type="button" variant="outline" size="sm" onClick={() => applyToPeople(allActiveIds, 'skillMin', String(state.skillScaling.commonMin))}>
+                  <Copy className="mr-1 h-3 w-3" />{t('apply_min_to_all')}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => applyToPeople(allActiveIds, 'skillMax', String(state.skillScaling.commonMax))}>
+                  <Copy className="mr-1 h-3 w-3" />{t('apply_max_to_all')}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => applyToPeople(allActiveIds, 'skillSmallerIsBetter', state.skillScaling.smallerIsBetter)}>
+                  <Copy className="mr-1 h-3 w-3" />{t('apply_dir_to_all')}
+                </Button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Resultate */}
+      {/* ============ Manuelle Eingabe ============ */}
+      {state.skillMode === 'manual' && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t('skill_manual_hint')}</p>
+          {activePeople.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('add_participants')}</p>
+          ) : (
+            <div className="space-y-2">
+              {activePeople.map(p => {
+                const teamIds = teamOfPerson(p.id);
+                return (
+                  <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg flex-wrap">
+                    <span className="w-32 truncate text-sm">{p.name}</span>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        placeholder={t('skill_manual_placeholder')}
+                        value={p.skill ?? ''}
+                        onChange={e => setPersonSkillField(p.id, 'skill', e.target.value)}
+                        className="w-20 h-8"
+                      />
+                      <ApplyButton ids={teamIds} field="skill" value={p.skill ?? ''} kind="team" />
+                      <ApplyButton ids={allActiveIds} field="skill" value={p.skill ?? ''} kind="all" />
+                    </div>
+                    {state.showSkillScales && (
+                      <>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            placeholder={t('skill_min_short')}
+                            value={p.skillMin ?? ''}
+                            onChange={e => setPersonSkillField(p.id, 'skillMin', e.target.value)}
+                            className="w-16 h-8"
+                          />
+                          <ApplyButton ids={teamIds} field="skillMin" value={p.skillMin ?? ''} kind="team" />
+                          <ApplyButton ids={allActiveIds} field="skillMin" value={p.skillMin ?? ''} kind="all" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            placeholder={t('skill_max_short')}
+                            value={p.skillMax ?? ''}
+                            onChange={e => setPersonSkillField(p.id, 'skillMax', e.target.value)}
+                            className="w-16 h-8"
+                          />
+                          <ApplyButton ids={teamIds} field="skillMax" value={p.skillMax ?? ''} kind="team" />
+                          <ApplyButton ids={allActiveIds} field="skillMax" value={p.skillMax ?? ''} kind="all" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Select
+                            value={p.skillSmallerIsBetter === null || p.skillSmallerIsBetter === undefined
+                              ? (state.skillScaling.smallerIsBetter ? 'smaller' : 'larger')
+                              : (p.skillSmallerIsBetter ? 'smaller' : 'larger')}
+                            onValueChange={v => setPersonDirection(p.id, v === 'smaller')}
+                          >
+                            <SelectTrigger className="w-40 h-8"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="larger">{t('skill_larger_is_better_short')}</SelectItem>
+                              <SelectItem value="smaller">{t('skill_smaller_is_better_short')}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <ApplyButton ids={teamIds} field="skillSmallerIsBetter" value={p.skillSmallerIsBetter ?? state.skillScaling.smallerIsBetter} kind="team" />
+                          <ApplyButton ids={allActiveIds} field="skillSmallerIsBetter" value={p.skillSmallerIsBetter ?? state.skillScaling.smallerIsBetter} kind="all" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============ Resultate ============ */}
       {state.skillMode === 'results' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -222,7 +358,7 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
                     id={`start-${match.id}`}
                     type="number"
                     value={match.startScore}
-                    onChange={(e) => updateMatch(match.id, { startScore: Number(e.target.value) })}
+                    onChange={e => updateMatch(match.id, { startScore: Number(e.target.value) })}
                     className="w-24 h-8"
                   />
                   <span className="text-xs text-muted-foreground">{t('start_score_hint')}</span>
@@ -238,7 +374,7 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
                           type="number"
                           placeholder={t('participant_score')}
                           value={match.entries.find(e => e.personId === p.id)?.score ?? ''}
-                          onChange={(e) => setMatchEntryScore(match.id, p.id, e.target.value)}
+                          onChange={e => setMatchEntryScore(match.id, p.id, e.target.value)}
                           className="w-24 h-8"
                         />
                       </div>

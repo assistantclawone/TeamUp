@@ -1,10 +1,13 @@
 export interface Person {
   id: string;
   name: string;
-  role: string | string[]; // Can be a single role or an array of alternative roles
-  mustBeWith: string[]; // array of person ids
-  cannotBeWith:string[]; // array of person ids
-  skill?: number | null; // optional skill level (shared scale). In 'common' scale; null/undefined = unset
+  role: string | string[];
+  mustBeWith: string[];
+  cannotBeWith: string[];
+  skill?: number | null;
+  skillMin?: number | null;
+  skillMax?: number | null;
+  skillSmallerIsBetter?: boolean | null;
 }
 
 export interface MatchResultEntry {
@@ -71,6 +74,7 @@ export interface AppState {
   language: string;
   skillScaling: SkillScaling;
   skillMode: SkillMode;
+  showSkillScales: boolean;
   skillDistribution: SkillDistribution;
   results: MatchResult[];
 }
