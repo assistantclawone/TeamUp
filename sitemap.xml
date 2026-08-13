@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<url>
+<loc>https://team-up-app.com</loc>
+<xhtml:link rel="alternate" hreflang="en" href="https://team-up-app.com?lang=en" />
+<xhtml:link rel="alternate" hreflang="de" href="https://team-up-app.com?lang=de" />
+<xhtml:link rel="alternate" hreflang="es" href="https://team-up-app.com?lang=es" />
+<xhtml:link rel="alternate" hreflang="fr" href="https://team-up-app.com?lang=fr" />
+<xhtml:link rel="alternate" hreflang="pt" href="https://team-up-app.com?lang=pt" />
+<xhtml:link rel="alternate" hreflang="ru" href="https://team-up-app.com?lang=ru" />
+<xhtml:link rel="alternate" hreflang="zh" href="https://team-up-app.com?lang=zh" />
+<xhtml:link rel="alternate" hreflang="hi" href="https://team-up-app.com?lang=hi" />
+<xhtml:link rel="alternate" hreflang="ar" href="https://team-up-app.com?lang=ar" />
+<xhtml:link rel="alternate" hreflang="bn" href="https://team-up-app.com?lang=bn" />
+<xhtml:link rel="alternate" hreflang="it" href="https://team-up-app.com?lang=it" />
+<xhtml:link rel="alternate" hreflang="ja" href="https://team-up-app.com?lang=ja" />
+<lastmod>2026-08-13T00:46:59.334Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>1</priority>
+</url>
+<url>
+<loc>https://team-up-app.com/login</loc>
+<lastmod>2026-08-13T00:46:59.334Z</lastmod>
+<changefreq>yearly</changefreq>
+<priority>0.5</priority>
+</url>
+</urlset>
