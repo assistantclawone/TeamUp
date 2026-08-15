@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import type { Person, AppState } from '@/lib/types';
 import { useTranslation } from '@/hooks/use-translation';
 import { Users, GripVertical, HelpCircle, Check, X } from 'lucide-react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, UniqueIdentifier, DragOverlay, DragOverEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent, UniqueIdentifier, DragOverlay, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -28,6 +28,8 @@ interface DraggablePersonProps {
   onSpontaneousRoleDelete: (roleToDelete: string) => void;
   teamRoleCounts: { [key: string]: number };
   teamQuotas: { [key: string]: number };
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
+  dragHandleRef?: React.Ref<HTMLDivElement>;
 }
 
 const DraggablePersonContent = ({ 
@@ -39,7 +41,9 @@ const DraggablePersonContent = ({
     onSpontaneousRoleCreate,
     onSpontaneousRoleDelete,
     teamRoleCounts,
-    teamQuotas
+    teamQuotas,
+    dragHandleRef,
+    dragHandleProps
 }: Omit<DraggablePersonProps, 'personIndex'>) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -103,7 +107,11 @@ const DraggablePersonContent = ({
 
   return (
     <div className={cn("p-2 bg-card rounded-md flex items-start gap-2 border w-full")}>
-      <div className="cursor-grab focus:outline-none flex-shrink-0 pt-1">
+      <div
+        ref={dragHandleRef}
+        {...dragHandleProps}
+        className="cursor-grab touch-none focus:outline-none flex-shrink-0 pt-1"
+      >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
       <div className="flex-grow flex flex-col gap-1 min-w-0">
@@ -197,7 +205,7 @@ const DraggablePersonContent = ({
 
 
 const SortablePerson = (props: DraggablePersonProps & { isDragging: boolean }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.person.id });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: props.person.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -207,9 +215,13 @@ const SortablePerson = (props: DraggablePersonProps & { isDragging: boolean }) =
   };
   
   return (
-    <li ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("flex items-center gap-2", { "z-10 relative": isDragging })}>
+    <li ref={setNodeRef} style={style} className={cn("flex items-center gap-2 list-none", { "z-10 relative": isDragging })}>
       <div className="w-full flex-grow-0">
-      <DraggablePersonContent {...props} />
+        <DraggablePersonContent 
+          {...props} 
+          dragHandleRef={setActivatorNodeRef} 
+          dragHandleProps={{...attributes, ...listeners}} 
+        />
       </div>
     </li>
   );
@@ -224,7 +236,10 @@ interface ResultsDisplayProps {
 
 export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allRoles, state }: ResultsDisplayProps) {
   const { t } = useTranslation();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 }}));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
+  );
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [spontaneousRoles, setSpontaneousRoles] = useState<string[]>([]);
   const [teams, setTeams] = useState(initialTeams);
