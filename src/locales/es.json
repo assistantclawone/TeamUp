@@ -154,5 +154,7 @@
   "skill_display": "Habilidad",
   "team_avg_skill": "Equipo Ø",
   "no_skill_scale": "Por favor proporcione una escala válida (Mín < Máx).",
-  "skill_distribution_explanation": "Elija cómo las habilidades controlan la asignación de equipos."
+  "skill_distribution_explanation": "Elija cómo las habilidades controlan la asignación de equipos.",
+  "group_result_score": "Resultado de grupo",
+  "group_result_person_score": "Puntuación"
 }

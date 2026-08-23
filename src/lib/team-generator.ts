@@ -1,4 +1,4 @@
-import { normalizeSkillValue } from './skill-engine';
+import { normalizeSkillValue, aggregateSkill } from './skill-engine';
 import type { Person, AppState } from './types';
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -40,9 +40,23 @@ function isTeamFull(team: Person[], teamIndex: number, state: AppState): boolean
 
 /**
  * Returns the effective skill value for a person normalized to [0, 1].
- * Fallback to 0.5 when no skill is set.
+ * In `results` skill mode the person's skill is derived from their match
+ * results via the skill engine (computeSkillForResult/aggregateSkill) instead
+ * of the manually entered `person.skill`. Fallback to 0.5 when no skill.
  */
 function getPersonSkillNormalized(person: Person, state: AppState): number | null {
+  // Derive a skill from match results when results mode is active and results
+  // are present. This wires the sport results into the team-balance logic.
+  if (state.skillMode === 'results' && state.results && state.results.length > 0) {
+    const derived = aggregateSkill(person.id, state.results, state.skillScaling);
+    if (derived !== null) {
+      const min = person.skillMin ?? state.skillScaling.commonMin;
+      const max = person.skillMax ?? state.skillScaling.commonMax;
+      const smallerIsBetter = person.skillSmallerIsBetter ?? state.skillScaling.smallerIsBetter;
+      return normalizeSkillValue(derived, min, max, smallerIsBetter);
+    }
+  }
+
   const s = person.skill;
   if (s === null || s === undefined || Number.isNaN(s)) return null;
 

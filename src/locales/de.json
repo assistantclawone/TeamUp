@@ -154,5 +154,7 @@
   "apply_to_all": "Apply to all",
   "apply_min_to_all": "Apply min to all",
   "apply_max_to_all": "Apply max to all",
-  "apply_dir_to_all": "Apply direction to all"
+  "apply_dir_to_all": "Apply direction to all",
+  "group_result_score": "Gruppenergebnis",
+  "group_result_person_score": "Punktestand"
 }

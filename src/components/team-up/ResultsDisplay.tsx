@@ -28,6 +28,8 @@ interface DraggablePersonProps {
   onSpontaneousRoleDelete: (roleToDelete: string) => void;
   teamRoleCounts: { [key: string]: number };
   teamQuotas: { [key: string]: number };
+  effectiveScore?: number | null;
+  onScoreOverride?: (value: number | null) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
   dragHandleRef?: React.Ref<HTMLDivElement>;
 }
@@ -42,6 +44,8 @@ const DraggablePersonContent = ({
     onSpontaneousRoleDelete,
     teamRoleCounts,
     teamQuotas,
+    effectiveScore,
+    onScoreOverride,
     dragHandleRef,
     dragHandleProps
 }: Omit<DraggablePersonProps, 'personIndex'>) => {
@@ -49,6 +53,14 @@ const DraggablePersonContent = ({
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [showAllRoles, setShowAllRoles] = useState(false);
+  const [scoreInput, setScoreInput] = useState<string>(effectiveScore != null ? String(effectiveScore) : '');
+  
+  // Keep the local score input in sync when the effective score changes from
+  // outside (e.g. when the group result field is edited).
+  useEffect(() => {
+    setScoreInput(effectiveScore != null ? String(effectiveScore) : '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveScore]);
   
   const role = useMemo(() => (Array.isArray(person.role) ? person.role[0] || '' : person.role || ''), [person.role]);
 
@@ -116,6 +128,26 @@ const DraggablePersonContent = ({
       </div>
       <div className="flex-grow flex flex-col gap-1 min-w-0">
         <div className="font-medium truncate flex-grow">{person.name}</div>
+        {onScoreOverride && (
+          <div className="flex items-center gap-1 pl-8 sm:pl-0">
+            <Input
+              type="number"
+              value={scoreInput}
+              placeholder={t('group_result_person_score')}
+              className="h-7 w-20 text-xs"
+              onChange={(e) => {
+                const val = e.target.value;
+                setScoreInput(val);
+                if (val === '') onScoreOverride(null);
+                else {
+                  const num = Number(val);
+                  if (!Number.isNaN(num)) onScoreOverride(num);
+                }
+              }}
+            />
+            <span className="text-[10px] text-muted-foreground">{t('group_result_score')}</span>
+          </div>
+        )}
         {state.showResultRoles && (
            <div className="pl-8 sm:pl-0">
                 <Popover open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) { setInputValue(''); } }}>
@@ -232,9 +264,14 @@ interface ResultsDisplayProps {
   onTeamChange: (teams: Person[][]) => void;
   allRoles: string[];
   state: AppState;
+  onGroupResultChange: (teamIndex: number, value: number | null) => void;
+  onPersonScoreOverride: (personId: string, value: number | null) => void;
+  /** Sync a role observed/created in the result view back into state.roles so the
+   *  shared state and the generated teams never drift apart (share consistency). */
+  onRolesSync: (role: string) => void;
 }
 
-export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allRoles, state }: ResultsDisplayProps) {
+export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allRoles, state, onGroupResultChange, onPersonScoreOverride, onRolesSync }: ResultsDisplayProps) {
   const { t } = useTranslation();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -252,6 +289,7 @@ export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allR
   const handleSpontaneousRoleCreate = (newRole: string) => {
     if (!spontaneousRoles.includes(newRole)) {
       setSpontaneousRoles(prev => [...prev, newRole]);
+      onRolesSync(newRole);
     }
   }
 
@@ -286,6 +324,7 @@ export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allR
         }
     }
     onTeamChange(newTeams);
+    if (newRole) onRolesSync(newRole);
   };
 
   const findContainer = (id: UniqueIdentifier, teamsData: Person[][]) => {
@@ -441,6 +480,14 @@ export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allR
                 .filter(([role, quota]) => quota > 0 && (teamRoleCounts[role] || 0) < quota)
                 .map(([role, quota]) => ({ role, needed: quota - (teamRoleCounts[role] || 0), current: teamRoleCounts[role] || 0, total: quota }));
 
+              // Group result score: one value per generated team, auto-applied to
+              // every member. A member can override it individually.
+              const groupScore = state.groupResultScores?.[index] ?? null;
+              const effectiveScoreFor = (personId: string): number | null => {
+                const override = state.personScoreOverrides?.[personId];
+                return override != null ? override : groupScore;
+              };
+
 
               return (
               <SortableContext items={teamMemberIds} strategy={verticalListSortingStrategy} key={containerId}>
@@ -467,6 +514,8 @@ export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allR
                               onSpontaneousRoleDelete={handleSpontaneousRoleDelete}
                               teamRoleCounts={teamRoleCounts}
                               teamQuotas={teamQuotas}
+                              effectiveScore={effectiveScoreFor(person.id)}
+                              onScoreOverride={(value) => onPersonScoreOverride(person.id, value)}
                             />
                            ))}
                         </ul>

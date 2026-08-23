@@ -154,5 +154,7 @@
   "skill_display": "দক্ষতা",
   "team_avg_skill": "টিম গড়",
   "no_skill_scale": "দয়া করে একটি বৈধ স্কেল প্রদান করুন (সর্বনিম্ন < সর্বোচ্চ)।",
-  "skill_distribution_explanation": "দক্ষতা কীভাবে টিম বণ্টন নিয়ন্ত্রণ করবে তা চয়ন করুন।"
+  "skill_distribution_explanation": "দক্ষতা কীভাবে টিম বণ্টন নিয়ন্ত্রণ করবে তা চয়ন করুন।",
+  "group_result_score": "গ্রুপ ফলাফল",
+  "group_result_person_score": "স্কোর"
 }

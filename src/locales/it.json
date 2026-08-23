@@ -154,5 +154,7 @@
   "skill_display": "Abilità",
   "team_avg_skill": "Squadra Ø",
   "no_skill_scale": "Si prega di fornire una scala valida (Min < Max).",
-  "skill_distribution_explanation": "Scegli come le abilità controllano l'assegnazione delle squadre."
+  "skill_distribution_explanation": "Scegli come le abilità controllano l'assegnazione delle squadre.",
+  "group_result_score": "Risultato di gruppo",
+  "group_result_person_score": "Punteggio"
 }

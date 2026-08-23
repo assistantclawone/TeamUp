@@ -25,12 +25,18 @@ import { useLanguage } from '@/contexts/language-context';
 import { stateToUrlParams, urlParamsToState } from '@/lib/url-state-manager';
 import { signOut } from 'firebase/auth';
 import { SaveConfigDialog } from './SaveConfigDialog';
+
+// Short, URL-friendly id generator. Uses timestamp (base 36) + a global counter
+// to stay unique even when several ids are created within the same millisecond.
+let _idCounter = 0;
+export const makeShortId = (prefix: string): string =>
+  `${prefix}${Date.now().toString(36)}${(_idCounter++ % 36).toString(36)}`;
 import { LoadConfigDropdown } from './LoadConfigDropdown';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 const getInitialState = (): AppState => ({
-  people: [{ id: `person-${Date.now()}`, name: '', role: [], mustBeWith: [], cannotBeWith: [] }],
+  people: [{ id: makeShortId('p'), name: '', role: [], mustBeWith: [], cannotBeWith: [] }],
   roles: [],
   numberOfTeams: 2,
   teamGenerationMode: 'numberOfTeams',
@@ -57,6 +63,8 @@ const getInitialState = (): AppState => ({
   showSkillScales: false,
   skillDistribution: 'off',
   results: [],
+  groupResultScores: {},
+  personScoreOverrides: {},
 });
 
 const flagKeys: (keyof AppState)[] = [
@@ -171,6 +179,32 @@ export default function TeamUpPage() {
     });
   };
 
+  // Group result field: one score per generated team, auto-applied to members.
+  const handleGroupResultChange = (teamIndex: number, value: number | null) => {
+    setState(prev => ({
+      ...prev,
+      groupResultScores: { ...prev.groupResultScores, [teamIndex]: value },
+    }));
+  };
+
+  const handlePersonScoreOverride = (personId: string, value: number | null) => {
+    setState(prev => ({
+      ...prev,
+      personScoreOverrides: { ...prev.personScoreOverrides, [personId]: value },
+    }));
+  };
+
+  // Share-consistency: ensure any role observed/created in the result view is
+  // also present in state.roles, so the shared state and the generated teams
+  // never drift apart.
+  const handleRolesSync = (role: string) => {
+    if (!role) return;
+    setState(prev => {
+      if (prev.roles.includes(role)) return prev;
+      return { ...prev, roles: [...prev.roles, role] };
+    });
+  };
+
   const handleUndo = () => {
     setState(prev => {
       if (prev.historyIndex > 0) {
@@ -206,7 +240,7 @@ export default function TeamUpPage() {
   const addPerson = (focusNew = false) => {
     updateState((prev) => ({
       ...prev,
-      people: [...prev.people, { id: `person-${Date.now()}`, name: '', role: [], mustBeWith: [], cannotBeWith: [] }],
+      people: [...prev.people, { id: makeShortId('p'), name: '', role: [], mustBeWith: [], cannotBeWith: [] }],
     }));
     if (focusNew) {
       setTimeout(() => {
@@ -486,6 +520,9 @@ export default function TeamUpPage() {
                     onTeamChange={handleTeamChange}
                     allRoles={allRoles}
                     state={state}
+                    onGroupResultChange={handleGroupResultChange}
+                    onPersonScoreOverride={handlePersonScoreOverride}
+                    onRolesSync={handleRolesSync}
                  />
               </>
           ) : (
@@ -648,6 +685,9 @@ export default function TeamUpPage() {
                 onTeamChange={handleTeamChange}
                 allRoles={allRoles}
                 state={state}
+                onGroupResultChange={handleGroupResultChange}
+                onPersonScoreOverride={handlePersonScoreOverride}
+                onRolesSync={handleRolesSync}
              />
           </>
       )}

@@ -81,7 +81,7 @@ export default function SkillsPanel({ state, updateState }: SkillsPanelProps) {
       results: [
         ...prev.results,
         {
-          id: `match-${Date.now()}`,
+          id: `m${Date.now().toString(36)}${Math.floor(Math.random() * 36).toString(36)}`,
           label: '',
           startScore: 0,
           entries: [],

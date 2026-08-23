@@ -154,5 +154,7 @@
   "skill_display": "Навык",
   "team_avg_skill": "Команда Ø",
   "no_skill_scale": "Пожалуйста, укажите верную шкалу (Мин < Макс).",
-  "skill_distribution_explanation": "Выберите, как навыки влияют на распределение по командам."
+  "skill_distribution_explanation": "Выберите, как навыки влияют на распределение по командам.",
+  "group_result_score": "Результат группы",
+  "group_result_person_score": "Счёт"
 }

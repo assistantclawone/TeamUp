@@ -77,4 +77,8 @@ export interface AppState {
   showSkillScales: boolean;
   skillDistribution: SkillDistribution;
   results: MatchResult[];
+  // Group result field (per generated group): one score per team that is
+  // auto-applied to every member. A member can override it individually.
+  groupResultScores: { [teamIndex: number]: number | null };
+  personScoreOverrides: { [personId: string]: number | null };
 }
