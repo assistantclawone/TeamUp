@@ -156,5 +156,6 @@
   "no_skill_scale": "Forneça uma escala válida (Mín < Máx).",
   "skill_distribution_explanation": "Escolha como as habilidades controlam a atribuição das equipes.",
   "group_result_score": "Resultado do grupo",
-  "group_result_person_score": "Pontuação"
+  "group_result_person_score": "Pontuação",
+  "team_score": "Pontuação da equipa"
 }

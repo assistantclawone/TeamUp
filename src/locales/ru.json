@@ -156,5 +156,6 @@
   "no_skill_scale": "Пожалуйста, укажите верную шкалу (Мин < Макс).",
   "skill_distribution_explanation": "Выберите, как навыки влияют на распределение по командам.",
   "group_result_score": "Результат группы",
-  "group_result_person_score": "Счёт"
+  "group_result_person_score": "Счёт",
+  "team_score": "Очки команды"
 }

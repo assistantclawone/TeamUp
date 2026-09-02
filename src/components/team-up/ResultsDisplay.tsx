@@ -259,6 +259,40 @@ const SortablePerson = (props: DraggablePersonProps & { isDragging: boolean }) =
   );
 };
 
+/** Per-team score input. Editing it applies the value to every member (no
+ *  individual override set), giving Renato's "one score per team, adopted for
+ *  all members" behaviour directly from the team header. */
+function TeamScoreField({ value, onValueChange, label }: {
+  value: number | null;
+  onValueChange: (value: number | null) => void;
+  label: string;
+}) {
+  const [input, setInput] = useState<string>(value != null ? String(value) : '');
+  useEffect(() => {
+    setInput(value != null ? String(value) : '');
+  }, [value]);
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        type="number"
+        value={input}
+        placeholder={label}
+        className="h-7 w-20 text-xs"
+        onChange={(e) => {
+          const val = e.target.value;
+          setInput(val);
+          if (val === '') onValueChange(null);
+          else {
+            const num = Number(val);
+            if (!Number.isNaN(num)) onValueChange(num);
+          }
+        }}
+      />
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
 interface ResultsDisplayProps {
   teams: Person[][];
   onTeamChange: (teams: Person[][]) => void;
@@ -493,10 +527,18 @@ export default function ResultsDisplay({ teams: initialTeams, onTeamChange, allR
               <SortableContext items={teamMemberIds} strategy={verticalListSortingStrategy} key={containerId}>
                 <Card id={containerId} className="flex flex-col bg-secondary">
                     <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                     <CardTitle className="flex items-center gap-2">
                         <Users className="text-primary"/>
                         {t('team')} {index + 1}
                     </CardTitle>
+                    {/* One score per team, applied to every member. */}
+                    <TeamScoreField
+                        value={groupScore}
+                        onValueChange={(v) => onGroupResultChange(index, v)}
+                        label={t('team_score')}
+                    />
+                    </CardHeader>
                     </CardHeader>
                     <CardContent className="flex-grow">
                         <ul className="space-y-2 min-h-[50px]">

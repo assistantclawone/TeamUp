@@ -156,5 +156,6 @@
   "apply_max_to_all": "Apply max to all",
   "apply_dir_to_all": "Apply direction to all",
   "group_result_score": "Group result",
-  "group_result_person_score": "Score"
+  "group_result_person_score": "Score",
+  "team_score": "Team score"
 }

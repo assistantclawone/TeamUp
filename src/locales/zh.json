@@ -156,5 +156,6 @@
   "no_skill_scale": "请提供有效的评分标准（最小 < 最大）。",
   "skill_distribution_explanation": "选择技能如何控制团队分配。",
   "group_result_score": "小组结果",
-  "group_result_person_score": "得分"
+  "group_result_person_score": "得分",
+  "team_score": "团队分数"
 }

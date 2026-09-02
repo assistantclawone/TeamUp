@@ -156,5 +156,6 @@
   "no_skill_scale": "Veuillez fournir une échelle valide (Min < Max).",
   "skill_distribution_explanation": "Choisissez comment les compétences contrôlent l'affectation des équipes.",
   "group_result_score": "Résultat de groupe",
-  "group_result_person_score": "Score"
+  "group_result_person_score": "Score",
+  "team_score": "Score équipe"
 }

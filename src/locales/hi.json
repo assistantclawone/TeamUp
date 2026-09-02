@@ -156,5 +156,6 @@
   "no_skill_scale": "कृपया एक मान्य स्केल प्रदान करें (न्यूनतम < अधिकतम)।",
   "skill_distribution_explanation": "चुनें कि कौशल टीम आवंटन को कैसे नियंत्रित करते हैं।",
   "group_result_score": "समूह परिणाम",
-  "group_result_person_score": "स्कोर"
+  "group_result_person_score": "स्कोर",
+  "team_score": "टीम स्कोर"
 }

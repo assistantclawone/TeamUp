@@ -156,5 +156,6 @@
   "no_skill_scale": "有効なスケールを入力してください (最小 < 最大)。",
   "skill_distribution_explanation": "スキルがチーム割り当てをどのように制御するかを選択します。",
   "group_result_score": "グループ結果",
-  "group_result_person_score": "スコア"
+  "group_result_person_score": "スコア",
+  "team_score": "チームの点数"
 }
